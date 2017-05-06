@@ -16,8 +16,9 @@ public final class Lab2 {
         
         for (Triangle t : Loader.cornellBox()) {
             for (Vector3 vertex : t.vertices()) {
-                Vector2 p = vertexShader(vertex, C, R, f);
-                app.rect(p.x(), p.y(), 1, 1);
+//                Vector2 p = vertexShader(vertex, C, R, f);
+//                app.rect(p.x(), p.y(), 1, 1);
+                drawPolygonEdgesLowRes(app, t.vertices(), C, R, f, 1);
             }
 
 //            drawLine(p, i1, j1, i2, j2);
@@ -31,10 +32,10 @@ public final class Lab2 {
         app.fill(255);
         
         for (Triangle t : Loader.cornellBox()) {
-            for (Vector3 vertex : t.vertices()) {
-                Vector2 p = vertexShader(vertex, C, R, f);
-                app.rect(p.x() * ratio, p.y() * ratio, ratio, ratio);
-            }
+//                Vector2 p = vertexShader(vertex, C, R, f);
+//                app.rect(p.x() * ratio, p.y() * ratio, ratio, ratio);
+            drawPolygonEdgesLowRes(app, t.vertices(), C, R, f, ratio);
+            
 
 //            drawLine(p, i1, j1, i2, j2);
 //            drawLine(p, i2, j2, i3, j3);
@@ -49,7 +50,7 @@ public final class Lab2 {
     
     private static List<Vector2> interpolate(Vector2 a, Vector2 b) {
         List<Vector2> result = new ArrayList<>();
-        int size = max(abs(a.x() - b.x()), abs(a.y() - b.y()));
+        int size = max(abs(a.x() - b.x()), abs(a.y() - b.y())) / 2;
 
         float dx = ((float) (b.x() - a.x())) / size;
         float dy = ((float) (b.y() - a.y())) / size;
@@ -58,20 +59,29 @@ public final class Lab2 {
             result.add(new Vector2(a.x() + (int) (i * dx), a.y() + (int) (i * dy)));
         }
         
-        result.add(b);
-        
         return result;
     }
     
-    private static void drawLine(PApplet p, int x1, int y1, int x2, int y2) {
-//        List<Vector2> line = interpolate(new Vector2(x1, y1), new Vector2(x2, y2));
-        int size = max(abs(x1 - x2), abs(y1 - y2));
+    private static void drawLineLowRes(PApplet p, Vector2 a, Vector2 b, Vector3 color, int ratio) {
+        List<Vector2> result = interpolate(a, b);
+        p.fill(255 * color.x(), 255 * color.y(), 255 * color.z());
 
-        float dx = ((float) (x2 - x1)) / size;
-        float dy = ((float) (y2 - y1)) / size;
+        for (Vector2 v : result) {
+            p.rect(v.x() * ratio, v.y() * ratio, ratio, ratio);
+        }
+    }
+    
+    private static void drawPolygonEdgesLowRes(PApplet p, List<Vector3> vertices, Vector3 C, Matrix3 R, float f, int ratio) {
+        int v = vertices.size();
+        List<Vector2> projectedVertices = new ArrayList<>();
         
-        for (int i = 0; i <= size; ++i) {
-            p.point(x1 + (int) (i * dx), y1 + (int) (i * dy));
+        for (int i = 0; i < v; ++i) {
+            projectedVertices.add(vertexShader(vertices.get(i), C, R, f));
+        }
+        
+        for (int i = 0; i < v; ++i) {
+            int j = (i + 1) % v;
+            drawLineLowRes(p, projectedVertices.get(i), projectedVertices.get(j), new Vector3(1f, 1f, 1f), ratio);            
         }
     }
 

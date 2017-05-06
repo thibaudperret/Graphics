@@ -40,6 +40,7 @@ public final class Main extends PApplet {
         
         long t = System.currentTimeMillis();        
         Lab2.drawLowRes(this, SIZE, RESOLUTION, RESOLUTION, C, R);
+//        Lab2.draw(this, SIZE, SIZE, C, R);
 //        Lab3.drawLowRes(this, SIZE, RESOLUTION, RESOLUTION, C, R);
         long dt = System.currentTimeMillis() - t;
         totalTime += dt;
