@@ -24,7 +24,7 @@ public final class Lab1 {
                 Intersection intersection = getIntersection(C, direction);
                 
                 if (intersection.valid()) {
-                    Vector3 color = Loader.cornellBox().get(intersection.index()).color().entrywiseDot(getDirectLight(intersection));
+                    Vector3 color = Loader.cornellBox().get(intersection.index()).color()/*.entrywiseDot(getDirectLight(intersection))*/;
 //                    Vector3 color = intersection.position().plus(ones());
                     p.stroke(color.x() * 255, color.y() * 255, color.z() * 255);
                     p.point(x, y);

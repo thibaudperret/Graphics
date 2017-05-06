@@ -1,5 +1,7 @@
 package se.graphics.cornell;
 
+import static se.graphics.cornell.Vector3.ones;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,6 +14,13 @@ public final class Lab2 {
     private static float f;
     private static int ratio;
     
+    private static float[][] depthBuffer;
+    
+    private final static Vector3 LIGHT_POSITION = new Vector3(0f, 0f, -5f);
+    private final static Vector3 LIGHT_POWER = ones().times(1.1f);
+    private final static Vector3 INDIRECT_LIGHT = ones().times(0.5f); 
+    private final static float PI = 3.141592653589793238f;
+    
     private Lab2() {
         
     }
@@ -23,9 +32,12 @@ public final class Lab2 {
         Lab2.R = R;
         Lab2.f = f;
         Lab2.ratio = 1;
+
+        depthBuffer = new float[size][size];
         
-        for (Triangle t : Loader.cornellBox()) {
-            drawPolygonEdges(app, t.vertices());
+        for (int i = 0; i < Loader.cornellBox().size(); ++i) {
+            Triangle t = Loader.cornellBox().get(i);
+            drawPolygon(app, t.vertices(), i, t.color());
         }
     }
     
@@ -37,14 +49,35 @@ public final class Lab2 {
         Lab2.f = f;
         Lab2.ratio = size / resolution;
         
-        for (Triangle t : Loader.cornellBox()) {
-            drawPolygon(app, t.vertices(), t.color());
+        depthBuffer = new float[resolution][resolution];
+        
+        for (int i = 0; i < Loader.cornellBox().size(); ++i) {
+            Triangle t = Loader.cornellBox().get(i);
+            drawPolygon(app, t.vertices(), i, t.color());
         }
     }
     
-    private static Vector2 vertexShader(Vector3 p) {
-        Vector3 ptilde = R.times(p.minus(C));
-        return new Vector2((int) (f * ptilde.x() / ptilde.z() + f / 2), (int) (f * ptilde.y() / ptilde.z() + f / 2));
+    private static Vector2 vertexShader(Vertex vertex) {
+        Vector3 ptilde = R.times(vertex.position().minus(C));
+        
+//        Vector3 r = LIGHT_POSITION.minus(vertex.position());
+        Vector3 r = vertex.position().minus(LIGHT_POSITION);
+        Vector3 rhat = r.normalise();
+        
+        float rsz = r.size();
+        float f = 1 / (4 * PI * rsz * rsz);
+        
+        Vector3 ill = LIGHT_POWER.times(max(rhat.dot(vertex.normal()), 0f)).times(f).plus(INDIRECT_LIGHT).entrywiseDot(vertex.reflectance());
+        System.out.println(ill);
+        return new Vector2((int) (f * ptilde.x() / ptilde.z() + f / 2), (int) (f * ptilde.y() / ptilde.z() + f / 2), 1f / (C.z() - vertex.position().z()), ill);
+    }
+    
+    private static void pixelShader(PApplet p, Vector2 v) {
+        if (depthBuffer[v.x()][v.y()] > v.zinv()) {
+            p.fill(255 * v.illumination().x(), 255 * v.illumination().y(), 255 * v.illumination().z());
+            p.rect(v.x() * ratio, v.y() * ratio, ratio, ratio);
+            depthBuffer[v.x()][v.y()] = v.zinv();
+        }
     }
     
     private static List<Vector2> interpolate(Vector2 a, Vector2 b) {
@@ -53,9 +86,14 @@ public final class Lab2 {
 
         float dx = ((float) (b.x() - a.x())) / size;
         float dy = ((float) (b.y() - a.y())) / size;
+        float dzinv = (b.zinv() - a.zinv()) / size;
+        
+        float dix = (b.illumination().x() - a.illumination().x()) / size;
+        float diy = (b.illumination().x() - a.illumination().x()) / size;
+        float diz = (b.illumination().x() - a.illumination().x()) / size;
         
         for (int i = 0; i < size; ++i) {
-            result.add(new Vector2(a.x() + (int) Math.floor(i * dx), a.y() + (int) Math.floor(i * dy)));
+            result.add(new Vector2(a.x() + (int) Math.floor(i * dx), a.y() + (int) Math.floor(i * dy), a.zinv() + i * dzinv, a.illumination().plus(new Vector3(dix, diy, diz).times(i))));
         }
         
         result.add(b);
@@ -63,15 +101,15 @@ public final class Lab2 {
         return result;
     }
     
-    private static void drawLine(PApplet p, Vector2 a, Vector2 b, Vector3 color) {
+    private static void drawLine(PApplet p, Vector2 a, Vector2 b) {
         List<Vector2> result = interpolate(a, b);
-        p.fill(255 * color.x(), 255 * color.y(), 255 * color.z());
 
         for (Vector2 v : result) {
-            p.rect(v.x() * ratio, v.y() * ratio, ratio, ratio);
+            pixelShader(p, v);
         }
     }
     
+    /*
     private static void drawPolygonEdges(PApplet p, List<Vector3> vertices) {
         int v = vertices.size();
         List<Vector2> projectedVertices = new ArrayList<>();
@@ -85,13 +123,15 @@ public final class Lab2 {
             drawLine(p, projectedVertices.get(i), projectedVertices.get(j), new Vector3(1f, 1f, 1f));            
         }
     }
+    */
     
-    private static void drawPolygon(PApplet p, List<Vector3> vertices, Vector3 color) {
+    private static void drawPolygon(PApplet p, List<Vector3> vertices, int triangleIndex, Vector3 color) {
         int v = vertices.size();
         List<Vector2> projectedVertices = new ArrayList<>();
 
         for (int i = 0; i < v; ++i) {
-            projectedVertices.add(vertexShader(vertices.get(i)));
+            Vertex vertex = new Vertex(vertices.get(i), Loader.cornellBox().get(triangleIndex).normal(), ones());
+            projectedVertices.add(vertexShader(vertex));
         }
         
         Tuple<List<Vector2>, List<Vector2>> leftRight = computePolygonRows(projectedVertices);
@@ -100,7 +140,7 @@ public final class Lab2 {
     
     private static void drawPolygonRow(PApplet p, List<Vector2> leftPixels, List<Vector2> rightPixels, Vector3 color) {
         for (int i = 0; i < leftPixels.size(); ++i) {
-            drawLine(p, leftPixels.get(i), rightPixels.get(i), color);
+            drawLine(p, leftPixels.get(i), rightPixels.get(i));
         }
     }
     
@@ -122,8 +162,8 @@ public final class Lab2 {
         List<Vector2> rightPixels = new ArrayList<>();
         
         for (int i = 0; i < size; ++i) {
-            leftPixels.add(new Vector2(Integer.MAX_VALUE, 0));
-            rightPixels.add(new Vector2(Integer.MIN_VALUE, 0));
+            leftPixels.add(new Vector2(Integer.MAX_VALUE, 0, 0f, null));
+            rightPixels.add(new Vector2(Integer.MIN_VALUE, 0, 0f, null));
         }
         
         List<Vector2> line1 = interpolate(vertexPixels.get(0), vertexPixels.get(1));
@@ -159,6 +199,10 @@ public final class Lab2 {
         }
         
         return new Tuple<>(leftPixels, rightPixels);
+    }
+
+    private static float max(float a, float b) {
+        return a > b ? a : b;
     }
 
     private static int max(int a, int b) {
