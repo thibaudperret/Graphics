@@ -7,7 +7,7 @@ import static se.graphics.cornell.Matrix3.*;
 
 public final class Main extends PApplet {
     
-    private final static int SIZE = 800;
+    private final static int SIZE = 1600;
     private final static int RESOLUTION = 400;
     
     private Vector3 C = vec3(0f, 0f, -3.1f);
@@ -39,8 +39,8 @@ public final class Main extends PApplet {
         updateCR();
         
         long t = System.currentTimeMillis();        
-//        Lab2.drawLowRes(this, SIZE, RESOLUTION, RESOLUTION, C, R);
-        Lab2.draw(this, SIZE, SIZE, C, R);
+        Lab2.drawLowRes(this, SIZE, RESOLUTION, RESOLUTION, C, R);
+//        Lab2.draw(this, SIZE, SIZE, C, R);
 //        Lab3.drawLowRes(this, SIZE, RESOLUTION, RESOLUTION, C, R);
         long dt = System.currentTimeMillis() - t;
         totalTime += dt;

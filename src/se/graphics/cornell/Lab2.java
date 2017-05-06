@@ -17,7 +17,7 @@ public final class Lab2 {
     private static float[][] depthBuffer;
     
     private final static Vector3 LIGHT_POSITION = new Vector3(0f, -0.5f, -0.7f);
-    private final static Vector3 LIGHT_POWER = ones().times(1.1f);
+    private final static Vector3 LIGHT_POWER = ones().times(14f);
     private final static Vector3 INDIRECT_LIGHT = ones().times(0.5f); 
     private final static float PI = 3.141592653589793238f;
     
@@ -72,7 +72,7 @@ public final class Lab2 {
         return new Vector2((int) (Lab2.f * ptilde.x() / ptilde.z() + Lab2.f / 2), (int) (Lab2.f * ptilde.y() / ptilde.z() + Lab2.f / 2), 1f / (C.z() - vertex.position().z()), vertex.position());
     }
     
-    private static void pixelShader(PApplet p, Vector2 v, Vector3 normal) {
+    private static void pixelShader(PApplet p, Vector2 v, Vector3 normal, Vector3 color) {
         if (depthBuffer[v.x()][v.y()] > v.zinv()) {
             
             Vector3 r = v.pos3d().minus(LIGHT_POSITION);
@@ -81,7 +81,7 @@ public final class Lab2 {
             float rsz = r.size();
             float f = 1 / (4 * PI * rsz * rsz);
             
-            Vector3 ill = LIGHT_POWER.times(max(rhat.dot(normal), 0f)).times(f).plus(INDIRECT_LIGHT);
+            Vector3 ill = LIGHT_POWER.times(max(rhat.dot(normal), 0f)).times(f).plus(INDIRECT_LIGHT).entrywiseDot(color);
             
             
             p.fill(255 * ill.x(), 255 * ill.y(), 255 * ill.z());
@@ -98,12 +98,15 @@ public final class Lab2 {
         float dy = ((float) (b.y() - a.y())) / size;
         float dzinv = (b.zinv() - a.zinv()) / size;
         
-        float dix = (b.pos3d().x() - a.pos3d().x()) / size;
-        float diy = (b.pos3d().y() - a.pos3d().y()) / size;
-        float diz = (b.pos3d().z() - a.pos3d().z()) / size;
+        float d3dx = (b.pos3d().x() - a.pos3d().x()) / size;
+        float d3dy = (b.pos3d().y() - a.pos3d().y()) / size;
+        float d3dz = (b.pos3d().z() - a.pos3d().z()) / size;
         
         for (int i = 0; i < size; ++i) {
-            result.add(new Vector2(a.x() + (int) Math.floor(i * dx), a.y() + (int) Math.floor(i * dy), a.zinv() + i * dzinv, a.pos3d().plus(new Vector3(dix, diy, diz).times(i))));
+            Vector3 vvv = a.pos3d().plus(new Vector3(d3dx, d3dy, d3dz).times(i));
+            Vector2 rew = vertexShader(new Vertex(vvv), new Vector3(1, 1, 1));
+//            result.add(rew);
+//            result.add(new Vector2(a.x() + (int) Math.floor(i * dx), a.y() + (int) Math.floor(i * dy), a.zinv() + i * dzinv, a.pos3d().plus(new Vector3(d3dx, d3dy, d3dz).times(i))));
         }
         
         result.add(b);
@@ -111,11 +114,11 @@ public final class Lab2 {
         return result;
     }
     
-    private static void drawLine(PApplet p, Vector2 a, Vector2 b, Vector3 normal) {
+    private static void drawLine(PApplet p, Vector2 a, Vector2 b, Vector3 normal, Vector3 color) {
         List<Vector2> result = interpolate(a, b);
 
         for (Vector2 v : result) {
-            pixelShader(p, v, normal);
+            pixelShader(p, v, normal, color);
         }
     }
     
@@ -145,12 +148,12 @@ public final class Lab2 {
         }
         
         Tuple<List<Vector2>, List<Vector2>> leftRight = computePolygonRows(projectedVertices);
-        drawPolygonRow(p, leftRight.x(), leftRight.y(), Loader.cornellBox().get(triangleIndex).normal());
+        drawPolygonRow(p, leftRight.x(), leftRight.y(), Loader.cornellBox().get(triangleIndex).normal(), Loader.cornellBox().get(triangleIndex).color());
     }
     
-    private static void drawPolygonRow(PApplet p, List<Vector2> leftPixels, List<Vector2> rightPixels, Vector3 normal) {
+    private static void drawPolygonRow(PApplet p, List<Vector2> leftPixels, List<Vector2> rightPixels, Vector3 normal, Vector3 color) {
         for (int i = 0; i < leftPixels.size(); ++i) {
-            drawLine(p, leftPixels.get(i), rightPixels.get(i), normal);
+            drawLine(p, leftPixels.get(i), rightPixels.get(i), normal, color);
         }
     }
     
