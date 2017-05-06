@@ -7,7 +7,7 @@ import static se.graphics.cornell.Matrix3.*;
 
 public final class Main extends PApplet {
     
-    private final static int SIZE = 1600;
+    private final static int SIZE = 800;
     private final static int RESOLUTION = 400;
     
     private Vector3 C = vec3(0f, 0f, -3.1f);

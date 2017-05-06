@@ -61,20 +61,30 @@ public final class Lab2 {
         Vector3 ptilde = R.times(vertex.position().minus(C));
         
 //        Vector3 r = LIGHT_POSITION.minus(vertex.position());
-        Vector3 r = vertex.position().minus(LIGHT_POSITION);
+/*        Vector3 r = vertex.position().minus(LIGHT_POSITION);
         Vector3 rhat = r.normalise();
         
         float rsz = r.size();
         float f = 1 / (4 * PI * rsz * rsz);
         
         Vector3 ill = LIGHT_POWER.times(max(rhat.dot(vertex.normal()), 0f)).times(f).plus(INDIRECT_LIGHT).entrywiseDot(vertex.reflectance());
-        
-        return new Vector2((int) (Lab2.f * ptilde.x() / ptilde.z() + Lab2.f / 2), (int) (Lab2.f * ptilde.y() / ptilde.z() + Lab2.f / 2), 1f / (C.z() - vertex.position().z()), ill.entrywiseDot(color));
+*/        
+        return new Vector2((int) (Lab2.f * ptilde.x() / ptilde.z() + Lab2.f / 2), (int) (Lab2.f * ptilde.y() / ptilde.z() + Lab2.f / 2), 1f / (C.z() - vertex.position().z()), vertex.position());
     }
     
-    private static void pixelShader(PApplet p, Vector2 v) {
+    private static void pixelShader(PApplet p, Vector2 v, Vector3 normal) {
         if (depthBuffer[v.x()][v.y()] > v.zinv()) {
-            p.fill(255 * v.illumination().x(), 255 * v.illumination().y(), 255 * v.illumination().z());
+            
+            Vector3 r = v.pos3d().minus(LIGHT_POSITION);
+            Vector3 rhat = r.normalise();
+            
+            float rsz = r.size();
+            float f = 1 / (4 * PI * rsz * rsz);
+            
+            Vector3 ill = LIGHT_POWER.times(max(rhat.dot(normal), 0f)).times(f).plus(INDIRECT_LIGHT);
+            
+            
+            p.fill(255 * ill.x(), 255 * ill.y(), 255 * ill.z());
             p.rect(v.x() * ratio, v.y() * ratio, ratio, ratio);
             depthBuffer[v.x()][v.y()] = v.zinv();
         }
@@ -88,12 +98,12 @@ public final class Lab2 {
         float dy = ((float) (b.y() - a.y())) / size;
         float dzinv = (b.zinv() - a.zinv()) / size;
         
-        float dix = (b.illumination().x() - a.illumination().x()) / size;
-        float diy = (b.illumination().y() - a.illumination().y()) / size;
-        float diz = (b.illumination().z() - a.illumination().z()) / size;
+        float dix = (b.pos3d().x() - a.pos3d().x()) / size;
+        float diy = (b.pos3d().y() - a.pos3d().y()) / size;
+        float diz = (b.pos3d().z() - a.pos3d().z()) / size;
         
         for (int i = 0; i < size; ++i) {
-            result.add(new Vector2(a.x() + (int) Math.floor(i * dx), a.y() + (int) Math.floor(i * dy), a.zinv() + i * dzinv, a.illumination().plus(new Vector3(dix, diy, diz).times(i))));
+            result.add(new Vector2(a.x() + (int) Math.floor(i * dx), a.y() + (int) Math.floor(i * dy), a.zinv() + i * dzinv, a.pos3d().plus(new Vector3(dix, diy, diz).times(i))));
         }
         
         result.add(b);
@@ -101,11 +111,11 @@ public final class Lab2 {
         return result;
     }
     
-    private static void drawLine(PApplet p, Vector2 a, Vector2 b) {
+    private static void drawLine(PApplet p, Vector2 a, Vector2 b, Vector3 normal) {
         List<Vector2> result = interpolate(a, b);
 
         for (Vector2 v : result) {
-            pixelShader(p, v);
+            pixelShader(p, v, normal);
         }
     }
     
@@ -130,17 +140,17 @@ public final class Lab2 {
         List<Vector2> projectedVertices = new ArrayList<>();
 
         for (int i = 0; i < v; ++i) {
-            Vertex vertex = new Vertex(vertices.get(i), Loader.cornellBox().get(triangleIndex).normal(), ones());
+            Vertex vertex = new Vertex(vertices.get(i));
             projectedVertices.add(vertexShader(vertex, color));
         }
         
         Tuple<List<Vector2>, List<Vector2>> leftRight = computePolygonRows(projectedVertices);
-        drawPolygonRow(p, leftRight.x(), leftRight.y());
+        drawPolygonRow(p, leftRight.x(), leftRight.y(), Loader.cornellBox().get(triangleIndex).normal());
     }
     
-    private static void drawPolygonRow(PApplet p, List<Vector2> leftPixels, List<Vector2> rightPixels) {
+    private static void drawPolygonRow(PApplet p, List<Vector2> leftPixels, List<Vector2> rightPixels, Vector3 normal) {
         for (int i = 0; i < leftPixels.size(); ++i) {
-            drawLine(p, leftPixels.get(i), rightPixels.get(i));
+            drawLine(p, leftPixels.get(i), rightPixels.get(i), normal);
         }
     }
     
