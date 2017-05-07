@@ -98,6 +98,10 @@ public final class Lab2 {
         float dy = ((float) (b.y() - a.y())) / size;
         float dzinv = (b.zinv() - a.zinv()) / size;
         
+        if (b.pos3d() == null) {
+            System.out.println("YO");
+        }
+        
         float d3dx = (b.pos3d().x() - a.pos3d().x()) / size;
         float d3dy = (b.pos3d().y() - a.pos3d().y()) / size;
         float d3dz = (b.pos3d().z() - a.pos3d().z()) / size;
@@ -105,8 +109,9 @@ public final class Lab2 {
         for (int i = 0; i < size; ++i) {
             Vector3 vvv = a.pos3d().plus(new Vector3(d3dx, d3dy, d3dz).times(i));
             Vector2 rew = vertexShader(new Vertex(vvv), new Vector3(1, 1, 1));
-//            result.add(rew);
-//            result.add(new Vector2(a.x() + (int) Math.floor(i * dx), a.y() + (int) Math.floor(i * dy), a.zinv() + i * dzinv, a.pos3d().plus(new Vector3(d3dx, d3dy, d3dz).times(i))));
+            result.add(rew);
+            Vector2 vv = new Vector2(a.x() + (int) Math.floor(i * dx), a.y() + (int) Math.floor(i * dy), a.zinv() + i * dzinv, a.pos3d().plus(new Vector3(d3dx, d3dy, d3dz).times(i)));
+//            result.add(vv);
         }
         
         result.add(b);
